@@ -360,14 +360,17 @@ export function stopTimers() {
 
 export async function acquireWakeLock() {
   try {
-    if ('wakeLock' in navigator) {
+    if ('wakeLock' in navigator)
       S.wakeLock = await navigator.wakeLock.request('screen');
-      document.addEventListener('visibilitychange', async () => {
-        if (document.visibilityState === 'visible' && S.wakeLock)
-          S.wakeLock = await navigator.wakeLock.request('screen').catch(() => null);
-      });
-    }
   } catch (_) { /* non-fatal */ }
+}
+
+// Registered once — re-acquires the wake lock whenever the tab becomes visible again.
+if ('wakeLock' in navigator) {
+  document.addEventListener('visibilitychange', async () => {
+    if (document.visibilityState === 'visible' && S.wakeLock)
+      S.wakeLock = await navigator.wakeLock.request('screen').catch(() => null);
+  });
 }
 
 export function releaseWakeLock() {
