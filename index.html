@@ -58,7 +58,7 @@
 }
 
 html, body { height: 100%; background: var(--bg); color: var(--text); font-family: system-ui, -apple-system, sans-serif; overflow-x: hidden; }
-.view { min-height: 100vh; }
+.view { min-height: 100vh; min-height: 100dvh; }
 .hidden { display: none !important; }
 
 /* ── Shared ── */
@@ -83,7 +83,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .privacy-icon:hover::after { content: attr(data-tip); position: absolute; bottom: calc(100% + 7px); left: 50%; transform: translateX(-50%); background: var(--surface); border: 1px solid var(--border); border-radius: 6px; padding: 8px 12px; font-size: 0.78rem; color: var(--text); white-space: normal; width: 240px; line-height: 1.45; z-index: 10; box-shadow: 0 4px 12px rgba(0,0,0,.4); font-weight: 400; pointer-events: none; }
 
 /* ── Meet Picker ── */
-#view-meets { padding: 0; max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+#view-meets { padding: 0; max-width: 780px; margin: 0 auto; display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
 .meets-header { flex-shrink: 0; padding: 16px 20px 12px; border-bottom: 1px solid var(--border); background: var(--bg); }
 .meets-topbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; margin-bottom: 14px; flex-wrap: wrap; }
 .meets-title { font-size: 1.4rem; font-weight: 700; }
@@ -101,7 +101,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .loading { text-align: center; padding: 40px 20px; color: var(--muted); font-size: 0.95rem; }
 
 /* ── Display view ── */
-#view-display { display: flex; flex-direction: column; height: 100vh; overflow: hidden; }
+#view-display { display: flex; flex-direction: column; height: 100vh; height: 100dvh; overflow: hidden; }
 
 /* Header */
 #disp-header { background: var(--surface); border-bottom: 1px solid var(--border); padding: 8px 16px; display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-shrink: 0; }
@@ -120,21 +120,22 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 #bt-clock { font-size: 2.1rem; font-weight: 700; font-variant-numeric: tabular-nums; letter-spacing: -0.02em; flex-shrink: 0; color: var(--text); }
 
 /* Lineup banner */
-#banner-lineup { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 9px 18px; border-bottom: 1px solid transparent; flex-shrink: 0; transition: background .3s, border-color .3s; }
-#banner-lineup.warn    { background: var(--warn-bg);   border-color: var(--warn-bd); }
-#banner-lineup.lineup  { background: var(--lineup-bg); border-color: var(--lineup-bd); }
-#banner-lineup.normal  { background: var(--surface);   border-color: var(--border); }
+#banner-lineup { flex-shrink: 0; }
+.bl-row { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding: 9px 18px; border-bottom: 1px solid transparent; transition: background .3s, border-color .3s; }
+.bl-row + .bl-row { border-top: 1px solid transparent; }
+.bl-row.warn   { background: var(--warn-bg);   border-color: var(--warn-bd); }
+.bl-row.warn + .bl-row.warn { border-top-color: var(--warn-bd); }
+.bl-row.lineup { background: var(--lineup-bg); border-color: var(--lineup-bd); }
+.bl-row.lineup + .bl-row { border-top-color: var(--lineup-bd); }
 .bl-left  { min-width: 0; flex: 1; }
 .bl-tag   { font-size: 0.68rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.08em; }
 .bl-tag.warn   { color: var(--orange); }
 .bl-tag.lineup { color: var(--red); }
-.bl-tag.normal { color: var(--muted); }
 .bl-event { font-size: 1.1rem; font-weight: 600; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .bl-time  { font-size: 0.78rem; color: var(--muted); margin-top: 1px; }
-#bl-countdown { font-size: 2.1rem; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
-#bl-countdown.warn   { color: var(--orange); }
-#bl-countdown.lineup { color: var(--red); }
-#bl-countdown.normal { color: var(--muted); }
+.bl-countdown { font-size: 2.1rem; font-weight: 700; font-variant-numeric: tabular-nums; flex-shrink: 0; }
+.bl-countdown.warn   { color: var(--orange); }
+.bl-countdown.lineup { color: var(--red); }
 
 /* Split panel */
 #split-panel { display: flex; flex: 1; overflow: hidden; min-height: 0; }
@@ -317,14 +318,7 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     </div>
     <div id="bt-clock">—</div>
   </div>
-  <div id="banner-lineup" class="normal">
-    <div class="bl-left">
-      <div class="bl-tag normal" id="bl-tag">NEXT FOR YOUR SWIMMERS</div>
-      <div class="bl-event" id="bl-event">—</div>
-      <div class="bl-time"  id="bl-time"></div>
-    </div>
-    <div id="bl-countdown" class="normal">—</div>
-  </div>
+  <div id="banner-lineup" class="hidden"></div>
   <div id="split-panel">
     <div id="panel-prev"></div>
     <div id="panel-next"></div>

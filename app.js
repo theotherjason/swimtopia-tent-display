@@ -283,10 +283,6 @@ export async function refreshData() {
 
 async function _loadSwimEntries() {
   $('panel-prev').innerHTML = '';
-  $('banner-lineup').className = 'normal';
-  $('bl-tag').textContent  = 'NO LIVE DATA YET'; $('bl-tag').className = 'bl-tag normal';
-  $('bl-event').textContent = 'Heat assignments not available before meet day';
-  $('bl-time').textContent  = ''; $('bl-countdown').textContent = '—';
   $('panel-next').innerHTML = '<div class="loading">Loading entries…</div>';
 
   try {

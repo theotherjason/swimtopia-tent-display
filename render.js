@@ -8,6 +8,9 @@ import {
 const upcomingGroups = () => _upcomingGroups(S.swimmers);
 const prevGroups     = () => _prevGroups(S.swimmers);
 
+// Snap lineup time to a whole minute so countdown and the minute-only display stay in sync
+const lineupEpoch = etaEpoch => Math.floor((etaEpoch - S.lineupMin * 60) / 60) * 60;
+
 // ── Top-level render ──────────────────────────────────────────────────────────
 
 export function renderAll() {
@@ -50,51 +53,64 @@ export function renderTopBanner() {
   }
 }
 
-// ── Lineup banner (countdown to next lineup) ─────────────────────────────────
+// ── Lineup banner (stackable, ephemeral) ─────────────────────────────────────
+
+let _bannerStateKey = null;
 
 export function renderLineupBanner(now) {
-  const groups = upcomingGroups();
-  // Skip groups where all entries are inProgress with no ETA — heat is already in the water
-  const next = groups.find(g => g.etaEpoch != null || g.entries.some(e => e.status === 'upcoming')) ?? null;
-  const banner = $('banner-lineup');
+  // Exclude events where all entries are already in the water — advance past them
+  const candidates = upcomingGroups().filter(g => g.entries.some(e => e.status === 'upcoming'));
 
-  if (!next) {
-    banner.className = 'normal';
-    $('bl-tag').textContent        = 'NEXT FOR YOUR SWIMMERS';
-    $('bl-tag').className          = 'bl-tag normal';
-    $('bl-event').textContent      = S.swimmers.length ? 'No more events' : '—';
-    $('bl-time').textContent       = '';
-    $('bl-countdown').textContent  = '—';
-    $('bl-countdown').className    = 'normal';
+  // Only show events within the warn/lineup window (ephemeral — hide banner otherwise)
+  const qualifying = candidates.filter(g => {
+    if (!g.etaEpoch) return false;
+    return (lineupEpoch(g.etaEpoch) - now) <= S.warnMin * 60;
+  });
+
+  const container = $('banner-lineup');
+
+  if (qualifying.length === 0) {
+    if (!container.classList.contains('hidden')) {
+      container.innerHTML = '';
+      container.classList.add('hidden');
+      _bannerStateKey = null;
+    }
     return;
   }
 
-  const lineupAt     = next.etaEpoch ? next.etaEpoch - S.lineupMin * 60 : null;
-  const secsToLineup = lineupAt ? lineupAt - now : null;
+  container.classList.remove('hidden');
 
-  $('bl-event').textContent = `Event ${next.number} · ${next.name}`;
-  $('bl-time').textContent  = next.etaEpoch
-    ? `Heat est. ${next.etaDisplay}  ·  Lineup ${lineupAt ? new Date(lineupAt * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' }) : '—'}`
-    : '';
+  // State key encodes event identity + warn vs lineup state — only rebuild DOM on change
+  const stateKey = qualifying.map(g => {
+    const secs = lineupEpoch(g.etaEpoch) - now;
+    return `${g.eventId}:${secs <= 0 ? 'L' : 'W'}`;
+  }).join(',');
 
-  if (secsToLineup !== null && secsToLineup <= 0) {
-    banner.className              = 'lineup';
-    $('bl-tag').textContent       = '🚨 LINEUP NOW';
-    $('bl-tag').className         = 'bl-tag lineup pulse';
-    $('bl-countdown').textContent = 'GO!';
-    $('bl-countdown').className   = 'lineup pulse';
-  } else if (secsToLineup !== null && secsToLineup <= S.warnMin * 60) {
-    banner.className              = 'warn';
-    $('bl-tag').textContent       = '⚠️ LINEUP SOON';
-    $('bl-tag').className         = 'bl-tag warn';
-    $('bl-countdown').textContent = fmtCountdown(secsToLineup);
-    $('bl-countdown').className   = 'warn';
+  if (stateKey !== _bannerStateKey) {
+    _bannerStateKey = stateKey;
+    container.innerHTML = qualifying.map(g => {
+      const lineupAt     = lineupEpoch(g.etaEpoch);
+      const secs         = lineupAt - now;
+      const isLineup     = secs <= 0;
+      const timeStr      = `Heat est. ${esc(g.etaDisplay)}  ·  Lineup ${new Date(lineupAt * 1000).toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
+      return `<div class="bl-row ${isLineup ? 'lineup' : 'warn'}" data-eid="${g.eventId}">
+        <div class="bl-left">
+          <div class="bl-tag ${isLineup ? 'lineup pulse' : 'warn'}">${isLineup ? '🚨 LINEUP NOW' : '⚠️ LINEUP SOON'}</div>
+          <div class="bl-event">${esc(`Event ${g.number} · ${g.name}`)}</div>
+          <div class="bl-time">${timeStr}</div>
+        </div>
+        <div class="bl-countdown ${isLineup ? 'lineup pulse' : 'warn'}">${isLineup ? 'GO!' : esc(fmtCountdown(secs))}</div>
+      </div>`;
+    }).join('');
   } else {
-    banner.className              = 'normal';
-    $('bl-tag').textContent       = 'NEXT FOR YOUR SWIMMERS';
-    $('bl-tag').className         = 'bl-tag normal';
-    $('bl-countdown').textContent = secsToLineup !== null ? fmtCountdown(secsToLineup) : '—';
-    $('bl-countdown').className   = 'normal';
+    // Only update countdown text — preserves pulse animation continuity
+    for (const g of qualifying) {
+      const secs = lineupEpoch(g.etaEpoch) - now;
+      if (secs > 0) {
+        const row = container.querySelector(`[data-eid="${g.eventId}"]`);
+        if (row) row.querySelector('.bl-countdown').textContent = fmtCountdown(secs);
+      }
+    }
   }
 }
 
@@ -205,7 +221,7 @@ export function renderNextPanel(now) {
 
   panel.innerHTML = '<div class="prev-event-title">Upcoming Events</div>';
   for (const g of groups) {
-    const lineupAt     = g.etaEpoch ? g.etaEpoch - S.lineupMin * 60 : null;
+    const lineupAt     = g.etaEpoch ? lineupEpoch(g.etaEpoch) : null;
     const secsToLineup = lineupAt ? lineupAt - now : null;
     const isActive     = g.entries.some(e => e.status === 'inProgress');
     const isLineup     = secsToLineup !== null && secsToLineup <= 0;
