@@ -105,6 +105,9 @@ export function upcomingGroups(swimmers) {
   }
   const groups = Object.values(map);
   groups.sort((a, b) => {
+    const aActive = a.entries.some(e => e.status === 'inProgress');
+    const bActive = b.entries.some(e => e.status === 'inProgress');
+    if (aActive !== bActive) return aActive ? -1 : 1;
     if (a.etaEpoch && b.etaEpoch) return a.etaEpoch - b.etaEpoch;
     if (a.etaEpoch) return -1;
     if (b.etaEpoch) return 1;
