@@ -57,14 +57,14 @@ function _parseAgeGroup(grp) {
 
 export function ageInRange(age, grp) {
   if (age == null) return false;
-  const range = _parseAgeGroup(grp);
-  return range != null && age >= range.min && age <= range.max;
+  const groups = Array.isArray(grp) ? grp : [grp];
+  return groups.some(g => { const r = _parseAgeGroup(g); return r != null && age >= r.min && age <= r.max; });
 }
 
 export function ageGroupOverlaps(minAge, maxAge, grp) {
   if (minAge == null || maxAge == null) return true;
-  const range = _parseAgeGroup(grp);
-  return range != null && range.max >= minAge && range.min <= maxAge;
+  const groups = Array.isArray(grp) ? grp : [grp];
+  return groups.some(g => { const r = _parseAgeGroup(g); return r != null && r.max >= minAge && r.min <= maxAge; });
 }
 
 export function checkQual(offTime, gender, age, distance, strokeCode, quals) {
@@ -126,11 +126,14 @@ export function prevGroups(swimmers) {
         eventId: ev.eventId, name: ev.name, number: ev.number,
         schedIdx: ev.schedIdx, entries: [],
       };
+      const isDq      = ev.isDq ?? false;
+      const isInvalid = ev.isInvalid ?? false;
       map[ev.eventId].entries.push({
         name: sw.name, age: sw.age, gender: sw.gender,
         heatNum: ev.heatNum, laneNum: ev.laneNum,
         offTime: ev.offTime, seedTime: ev.seedTime,
-        place: ev.place, isDq: ev.isDq ?? false, isScratched: ev.isScratched ?? false,
+        place: ev.place, isDq, isInvalid,
+        isScratched: ev.offTime == null && !isDq && !isInvalid,
         qualifying: ev.qualifying,
         isRelay: ev.isRelay ?? false, relayTeam: ev.relayTeam ?? null,
         legPosition: ev.legPosition ?? null, legStroke: ev.legStroke ?? null,

@@ -84,6 +84,12 @@ describe('ageInRange', () => {
   it('18-over: at floor', () => expect(ageInRange(18, '18-over')).toBe(true));
   it('18-over: below floor', () => expect(ageInRange(17, '18-over')).toBe(false));
   it('ignores spaces', () => expect(ageInRange(10, '9 - 10')).toBe(true));
+  it('array: matches any group', () => {
+    expect(ageInRange(10, ['9-10', '11-12'])).toBe(true);
+    expect(ageInRange(12, ['9-10', '11-12'])).toBe(true);
+    expect(ageInRange(13, ['9-10', '11-12'])).toBe(false);
+  });
+  it('array: empty array is false', () => expect(ageInRange(10, [])).toBe(false));
 });
 
 // ── ageGroupOverlaps ──────────────────────────────────────────────────────────
@@ -105,6 +111,11 @@ describe('ageGroupOverlaps', () => {
   it('over format', () => {
     expect(ageGroupOverlaps(18, 20, '18-over')).toBe(true);
     expect(ageGroupOverlaps(10, 12, '18-over')).toBe(false);
+  });
+  it('array: overlaps any group', () => {
+    expect(ageGroupOverlaps(9, 10, ['9-10', '11-12'])).toBe(true);
+    expect(ageGroupOverlaps(11, 12, ['9-10', '11-12'])).toBe(true);
+    expect(ageGroupOverlaps(13, 14, ['9-10', '11-12'])).toBe(false);
   });
 });
 

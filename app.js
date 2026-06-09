@@ -100,10 +100,11 @@ function _renderMeetList(meets, isUpcoming) {
 }
 
 export async function loadTeamsForMeet(meetId, meetName, cardEl) {
-  const teamSel = $('inp-team'), ageSel = $('inp-age'), goBtn = $('go-btn');
-  teamSel.disabled = ageSel.disabled = goBtn.disabled = true;
+  const teamSel  = $('inp-team'), pillsEl = $('inp-age-pills'), goBtn = $('go-btn');
+  teamSel.disabled = goBtn.disabled = true;
   teamSel.innerHTML = '<option value="">Loading…</option>';
-  ageSel.innerHTML  = '<option value="">Loading…</option>';
+  pillsEl.classList.add('disabled');
+  pillsEl.innerHTML = '<span class="age-pills-placeholder">Loading…</span>';
   document.querySelectorAll('.meet-card').forEach(c => c.style.outline = '');
   if (cardEl) cardEl.style.outline = '2px solid var(--blue)';
 
@@ -118,14 +119,20 @@ export async function loadTeamsForMeet(meetId, meetName, cardEl) {
   };
 
   const populateAgeGroups = groups => {
-    const saved = sessionStorage.getItem('st_age') || '9-10';
-    ageSel.innerHTML = groups.map(({ minAge, maxAge }) => {
+    let saved = ['9-10'];
+    try {
+      const raw = sessionStorage.getItem('st_age');
+      if (raw) { const p = JSON.parse(raw); saved = Array.isArray(p) ? p : [p]; }
+    } catch { /* keep default */ }
+
+    pillsEl.innerHTML = groups.map(({ minAge, maxAge }) => {
       const label = minAge === 0 ? `${maxAge} & Under` : maxAge > 17 ? `${minAge} & Over` : `${minAge}-${maxAge}`;
       const value = `${minAge}-${maxAge}`;
-      return `<option value="${value}"${value === saved ? ' selected' : ''}>${label}</option>`;
+      return `<label class="age-pill"><input type="checkbox" value="${value}"${saved.includes(value) ? ' checked' : ''}><span>${label}</span></label>`;
     }).join('');
-    if (!ageSel.value) ageSel.selectedIndex = 0;
-    ageSel.disabled = false;
+    if (!pillsEl.querySelector('input:checked') && pillsEl.querySelector('input'))
+      pillsEl.querySelector('input').checked = true;
+    pillsEl.classList.remove('disabled');
   };
 
   try {
@@ -153,19 +160,20 @@ export async function loadTeamsForMeet(meetId, meetName, cardEl) {
     goBtn.disabled = false;
   } catch (ex) {
     teamSel.innerHTML = '<option value="">Error loading</option>';
-    ageSel.innerHTML  = '<option value="">Error loading</option>';
-    teamSel.disabled = ageSel.disabled = false;
+    pillsEl.innerHTML = '<span class="age-pills-placeholder" style="color:var(--red)">Error loading</span>';
+    teamSel.disabled = false; pillsEl.classList.remove('disabled');
     console.error(ex);
   }
 }
 
 export async function selectMeet(meetId, meetName) {
   S.meetId     = meetId;
-  S.ageGroup   = $('inp-age').value;
+  S.ageGroups  = [...document.querySelectorAll('#inp-age-pills input:checked')].map(cb => cb.value);
+  if (!S.ageGroups.length) S.ageGroups = ['9-10'];
   S.gender     = $('inp-gender').value;
   S.lineupMin  = parseInt($('inp-lineup').value, 10)  || 20;
   S.warnMin    = parseInt($('inp-warning').value, 10) || 30;
-  sessionStorage.setItem('st_age', S.ageGroup);
+  sessionStorage.setItem('st_age', JSON.stringify(S.ageGroups));
 
   const teamSel = $('inp-team');
   S.teamFilter = teamSel.value.toUpperCase();
@@ -262,7 +270,7 @@ export async function refreshData() {
     const { assembled, quals } = assembleSwimmers(
       heatsRes.data, rawEntries, rawResults, relayLegMap,
       athletes, eventsRes.data, stdRes.included || [],
-      targetTeamId, S.ageGroup, S.gender
+      targetTeamId, S.ageGroups, S.gender
     );
 
     S.swimmers  = assembled;
@@ -310,7 +318,7 @@ async function _loadSwimEntries() {
       const ath = athleteMap[entry.relationships?.athlete?.data?.id];
       if (!evd || !ath) continue;
       const age = ath.competitionAge ?? ath.age;
-      if (!ageInRange(age, S.ageGroup)) continue;
+      if (!ageInRange(age, S.ageGroups)) continue;
       if (S.gender && ath.gender !== S.gender) continue;
       (byEvent[entry.relationships.swimEvent.data.id] ??= { evd, entries: [] }).entries.push({
         name:     [ath.preferredName || ath.firstName, ath.lastName].filter(Boolean).join(' '),
@@ -320,7 +328,7 @@ async function _loadSwimEntries() {
 
     const groups = Object.values(byEvent).sort((a, b) => parseInt(a.evd.number || 0) - parseInt(b.evd.number || 0));
     if (!groups.length) {
-      $('panel-next').innerHTML = `<div class="panel-empty">No entries found for ${esc(S.ageGroup)}${S.gender ? ' ' + (S.gender === 'M' ? 'Boys' : 'Girls') : ''}.</div>`;
+      $('panel-next').innerHTML = `<div class="panel-empty">No entries found for ${esc(S.ageGroups.join(', '))}${S.gender ? ' ' + (S.gender === 'M' ? 'Boys' : 'Girls') : ''}.</div>`;
       return;
     }
 
@@ -347,7 +355,7 @@ async function _loadSwimEntries() {
     }
 
     S.updatedAt = Date.now();
-    $('dh-sub').textContent = S.ageGroup
+    $('dh-sub').textContent = S.ageGroups.join(', ')
       + (S.gender ? ' · ' + (S.gender === 'M' ? 'Boys' : 'Girls') : '')
       + (S.teamFilter ? ` · ${S.teamName || S.teamFilter}` : '');
 
@@ -452,6 +460,11 @@ window.adjustFontSize = adjustFontSize;
 window.toggleFullscreen = toggleFullscreen;
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
+
+$('inp-age-pills').addEventListener('change', () => {
+  const goBtn = $('go-btn');
+  if (goBtn.dataset.meetId) goBtn.disabled = !$('inp-age-pills').querySelector('input:checked');
+});
 
 if (DEMO_MODE) {
   show('view-display');

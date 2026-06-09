@@ -12,7 +12,7 @@ export function loadDemoData() {
 
   S.meetId     = 'demo';
   S.nirvanaId  = 'demo';
-  S.ageGroup   = '9-10';
+  S.ageGroups  = ['9-10'];
   S.gender     = 'M';
   S.teamFilter = 'HUR';
   S.teamName   = 'Hurricane Swim Team';

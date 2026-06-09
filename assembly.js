@@ -17,14 +17,13 @@ export function assembleQuals(stdIncluded) {
     const tseId = o.relationships?.timeStandardEvent?.data?.id;
     const tse   = idx[`timeStandardEvent:${tseId}`];
     if (!tse) continue;
-    const se = idx[`swimEvent:${tse.relationships?.swimEvent?.data?.id}`];
-    if (!se) continue;
-    const sea = se.attributes;
+    const tea = tse.attributes;
+    if (!tea?.distance || !tea?.strokeCode) continue;
     quals.push({
-      label: stdLabel, cutTime: a.cutTimeInt,
-      gender: a.gender || sea.gender,
-      ageMin: a.ageMin ?? sea.minAge, ageMax: a.ageMax ?? sea.maxAge,
-      distance: sea.distance, strokeCode: sea.strokeCode,
+      label: stdLabel, cutTime: a.timeInt,
+      gender: tea.athleteGender,
+      ageMin: tea.athleteMinAge, ageMax: tea.athleteMaxAge,
+      distance: tea.distance, strokeCode: tea.strokeCode,
     });
   }
   return quals;
@@ -35,7 +34,7 @@ export function assembleQuals(stdIncluded) {
 export function assembleSwimmers(
   heatsData, rawEntries, rawResults, relayLegMap,
   athletes, eventsData, stdIncluded,
-  targetTeamId, ageGroup, gender
+  targetTeamId, ageGroups, gender
 ) {
   const quals = assembleQuals(stdIncluded);
 
@@ -96,15 +95,14 @@ export function assembleSwimmers(
         const ath = athletes[aid];
         if (!ath) continue;
         if (targetTeamId && ath._teamId !== targetTeamId) continue;
-        if (!ageInRange(ath.competitionAge, ageGroup)) continue;
+        if (!ageInRange(ath.competitionAge, ageGroups)) continue;
         if (gender && ath.gender !== gender) continue;
 
         const ra      = rawResults[entry.relationships?.nirvanaResult?.data?.id]?.attributes ?? {};
         const offTime = ra.officialTimeInt ?? null;
         const status  = _heatStatus(ha, offTime, ra);
 
-        const hasResultRel = !!entry.relationships?.nirvanaResult?.data?.id;
-        const isScratched = ha.status === 'done' && offTime == null && !(ra.isDq ?? false) && ra.invalidCode == null && !hasResultRel;
+        const isScratched = ha.status === 'done' && offTime == null && !(ra.isDq ?? false) && ra.invalidCode == null;
         const evt = {
           eventId: eid,   name: evd.name ?? 'Event', number: evd.number ?? '',
           heatNum: ha.number, laneNum: ea.laneNumber, status,
@@ -124,7 +122,7 @@ export function assembleSwimmers(
       if (!entryTeamId) continue;
       if (targetTeamId && entryTeamId !== targetTeamId) continue;
       if (gender && evd.gender && evd.gender !== gender) continue;
-      if (!ageGroupOverlaps(evd.minAge, evd.maxAge, ageGroup)) continue;
+      if (!ageGroupOverlaps(evd.minAge, evd.maxAge, ageGroups)) continue;
 
       const ra         = rawResults[entry.relationships?.nirvanaResult?.data?.id]?.attributes ?? {};
       const offTime    = ra.officialTimeInt ?? null;
@@ -141,7 +139,7 @@ export function assembleSwimmers(
       for (const leg of legs) {
         const ath = athletes[leg.athleteId];
         if (!ath) continue;
-        if (!ageInRange(ath.competitionAge, ageGroup)) continue;
+        if (!ageInRange(ath.competitionAge, ageGroups)) continue;
 
         getOrCreateSwimmer(leg.athleteId, ath).events.push({
           eventId: eid,   name: relayName, number: evd.number ?? '',

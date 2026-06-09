@@ -19,7 +19,7 @@ export function renderAll() {
   renderLineupBanner(now);
   renderPrevPanel();
   renderNextPanel(now);
-  $('dh-sub').textContent = S.ageGroup
+  $('dh-sub').textContent = (S.ageGroups ?? []).join(', ')
     + (S.gender ? ' · ' + (S.gender === 'F' ? 'Girls' : 'Boys') : '')
     + (S.teamFilter ? ` · ${S.teamName || S.teamFilter}` : '');
 }
@@ -176,7 +176,7 @@ function _renderRelayResultBlock(entries) {
 function _renderIndividualResults(entries) {
   let html = '';
   const anyHasTime = entries.some(e => e.offTime != null);
-  const hasPartial = anyHasTime && entries.some(e => e.offTime == null && !e.isDq && !e.isScratched);
+  const hasPartial = anyHasTime && entries.some(e => e.offTime == null && !e.isDq && !e.isScratched && !e.isInvalid);
 
   for (const e of entries) {
     const placeN   = e.place ?? 0;
@@ -215,7 +215,7 @@ export function renderNextPanel(now) {
   if (!groups.length) {
     panel.innerHTML = S.swimmers.length
       ? '<div class="panel-empty">All events complete.</div>'
-      : `<div class="loading" style="color:var(--yellow)">No swimmers found for ${esc(S.ageGroup)}${S.gender ? ' ' + (S.gender === 'F' ? 'Girls' : 'Boys') : ''}${S.teamFilter ? ' · ' + esc(S.teamFilter) : ''}.</div>`;
+      : `<div class="loading" style="color:var(--yellow)">No swimmers found for ${esc((S.ageGroups ?? []).join(', '))}${S.gender ? ' ' + (S.gender === 'F' ? 'Girls' : 'Boys') : ''}${S.teamFilter ? ' · ' + esc(S.teamFilter) : ''}.</div>`;
     return;
   }
 

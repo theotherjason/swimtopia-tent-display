@@ -11,7 +11,7 @@ export const S = {
   orgId:      sessionStorage.getItem('st_org'),
   meetId:     null,
   nirvanaId:  null,
-  ageGroup:   '9-10',
+  ageGroups:  ['9-10'],
   gender:     'M',
   teamFilter: 'HUR',
   teamName:   '',        // full team name for display
