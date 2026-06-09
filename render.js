@@ -4,6 +4,7 @@ import {
   esc, fmtTime, fmtClock, fmtCountdown, fmtDelta,
   upcomingGroups as _upcomingGroups, prevGroups as _prevGroups,
 } from './utils.js';
+import { playWarning, playLineup } from './sounds.js';
 
 const upcomingGroups = () => _upcomingGroups(S.swimmers);
 const prevGroups     = () => _prevGroups(S.swimmers);
@@ -56,6 +57,7 @@ export function renderTopBanner() {
 // ── Lineup banner (stackable, ephemeral) ─────────────────────────────────────
 
 let _bannerStateKey = null;
+const _soundedKeys = new Set();
 
 export function renderLineupBanner(now) {
   // Exclude events where all entries are already in the water — advance past them
@@ -88,6 +90,18 @@ export function renderLineupBanner(now) {
 
   if (stateKey !== _bannerStateKey) {
     _bannerStateKey = stateKey;
+
+    // Fire sounds once per event per state transition (W→warning, L→lineup/GO)
+    let playedLineup = false, playedWarning = false;
+    for (const seg of stateKey.split(',')) {
+      if (_soundedKeys.has(seg)) continue;
+      _soundedKeys.add(seg);
+      if (seg.endsWith(':L')) playedLineup = true;
+      else if (seg.endsWith(':W')) playedWarning = true;
+    }
+    if (playedLineup) playLineup();
+    else if (playedWarning) playWarning();
+
     container.innerHTML = qualifying.map(g => {
       const lineupAt     = lineupEpoch(g.etaEpoch);
       const secs         = lineupAt - now;

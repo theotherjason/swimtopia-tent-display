@@ -13,6 +13,7 @@ import { assembleSwimmers, assembleQuals } from './assembly.js';
 import { renderAll, renderTopBanner, renderLineupBanner, renderNextPanel, tick } from './render.js';
 import { loadDemoData, startDemoAnimation } from './demo.js';
 import { STROKE, STANDARD_AGE_GROUPS, esc, ageInRange, fmtTime } from './utils.js';
+import { unlockAudio } from './sounds.js';
 
 // ── Session expiry ─────────────────────────────────────────────────────────────
 
@@ -418,6 +419,8 @@ export function adjustFontSize(dir) {
 }
 
 _applyFontSize();
+
+document.addEventListener('click', unlockAudio, { once: true });
 
 // ── Fullscreen ────────────────────────────────────────────────────────────────
 
