@@ -389,11 +389,7 @@ export async function acquireWakeLock() {
   if (!('wakeLock' in navigator)) return;
   try {
     S.wakeLock = await navigator.wakeLock.request('screen');
-    S.wakeLock.addEventListener('release', () => {
-      S.wakeLock = null;
-      // Re-acquire immediately if the page is still visible (OS released it)
-      if (document.visibilityState === 'visible') acquireWakeLock();
-    });
+    S.wakeLock.addEventListener('release', () => { S.wakeLock = null; });
   } catch (_) { /* non-fatal */ }
 }
 
