@@ -141,7 +141,7 @@ GET /swim-meets/{id}/swim-event-heat-trackers
 
 GET /swim-meets/{id}/time-standard-sets
   ?include=time_standards,time_standard_events,time_standard_events.time_standard_cuts
-  timeStandardCut: cutTimeInt, gender, ageMin, ageMax
+  timeStandardCut: timeInt, gender, ageMin, ageMax
   timeStandard: label (e.g. "INV")
 ```
 
