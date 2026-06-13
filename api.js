@@ -34,20 +34,31 @@ async function _refreshToken() {
 export async function api(path, params = {}, _retry = true) {
   const url = new URL(`${BASE}/${path}`);
   Object.entries(params).forEach(([k, v]) => url.searchParams.append(k, v));
-  const r = await fetch(url, {
-    headers: { 'Accept': 'application/vnd.api+json', 'Authorization': `Bearer ${S.token}` },
-  });
-  if (r.status === 401 && _retry) {
+  let lastErr;
+  for (let attempt = 0; attempt < 3; attempt++) {
+    if (attempt > 0) await new Promise(res => setTimeout(res, 1000 * attempt));
     try {
-      await _refreshToken();
-      return api(path, params, false);
-    } catch {
-      _onSessionExpired();
-      throw new Error('Session expired — please sign in again.');
+      const r = await fetch(url, {
+        headers: { 'Accept': 'application/vnd.api+json', 'Authorization': `Bearer ${S.token}` },
+      });
+      if (r.status === 401 && _retry) {
+        try {
+          await _refreshToken();
+          return api(path, params, false);
+        } catch {
+          _onSessionExpired();
+          throw new Error('Session expired — please sign in again.');
+        }
+      }
+      if (!r.ok) throw new Error(`API ${r.status} on ${path}`);
+      return r.json();
+    } catch (err) {
+      // Re-throw immediately for HTTP errors and auth errors — only retry network failures.
+      if (err.message.startsWith('API ') || err.message.startsWith('Session expired')) throw err;
+      lastErr = err;
     }
   }
-  if (!r.ok) throw new Error(`API ${r.status} on ${path}`);
-  return r.json();
+  throw lastErr;
 }
 
 export async function paginate(path, params = {}, size = 25) {

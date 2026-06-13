@@ -306,6 +306,15 @@ export async function refreshData() {
       S._evDetails
     );
 
+    // Mark events the tracker has already passed as done so they leave the
+    // upcoming panel even when results haven't been entered yet.
+    if (newTracker?.currentEventNumberDigit) {
+      const cur = newTracker.currentEventNumberDigit;
+      for (const sw of assembled)
+        for (const ev of sw.events)
+          if (ev.status !== 'done' && parseInt(ev.number, 10) < cur) ev.status = 'done';
+    }
+
     S.swimmers       = assembled;
     S.quals          = quals;
     S.tracker        = newTracker;
