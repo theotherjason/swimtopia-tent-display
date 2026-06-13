@@ -139,8 +139,19 @@ export function renderPrevPanel() {
 
   for (const g of groups) {
     const isRelayEvent = g.entries.some(e => e.isRelay);
+    const cuts = !isRelayEvent && g.distance && g.strokeCode
+      ? S.quals.filter(q =>
+          q.distance === g.distance && q.strokeCode === g.strokeCode &&
+          g.entries.some(e => (!q.gender || q.gender === e.gender) &&
+            (q.ageMin == null || e.age >= q.ageMin) &&
+            (q.ageMax == null || e.age <= q.ageMax))
+        )
+      : [];
+    const cutLine = cuts.length
+      ? cuts.map(q => `<span class="event-cut">${esc(q.label)}: ${fmtTime(q.cutTime)}</span>`).join('')
+      : '';
     html += `<div class="prev-event-block">
-      <div class="prev-event-name">Event ${esc(g.number)} · ${esc(g.name)}</div>`;
+      <div class="prev-event-name">Event ${esc(g.number)} · ${esc(g.name)}${cutLine ? `<span class="event-cuts">${cutLine}</span>` : ''}</div>`;
 
     if (isRelayEvent) {
       html += _renderRelayResultBlock(g.entries);

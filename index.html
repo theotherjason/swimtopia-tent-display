@@ -156,7 +156,9 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .prev-event-title { font-size: 0.72rem; font-weight: 700; text-transform: uppercase; letter-spacing: 0.07em; color: var(--muted); margin-bottom: 12px; }
 .prev-event-block { margin-bottom: 22px; padding-bottom: 22px; border-bottom: 2px solid var(--border); }
 .prev-event-block:last-child { border-bottom: none; margin-bottom: 0; }
-.prev-event-name  { font-size: 1.05rem; font-weight: 700; color: var(--text); padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--border); width: 100%; }
+.prev-event-name  { font-size: 1.05rem; font-weight: 700; color: var(--text); padding-bottom: 8px; margin-bottom: 8px; border-bottom: 1px solid var(--border); width: 100%; display: flex; align-items: baseline; gap: 8px; flex-wrap: wrap; }
+.event-cuts { display: flex; gap: 6px; flex-wrap: wrap; }
+.event-cut  { font-size: 0.72rem; font-weight: 600; color: var(--muted); }
 .prev-swimmer { display: flex; align-items: flex-start; gap: 10px; padding: 7px 0; border-bottom: 1px solid var(--divider); }
 .prev-swimmer:last-child { border-bottom: none; }
 .ps-badge { flex: 0 0 2.8rem; font-size: 1.1rem; font-weight: 800; text-align: center; line-height: 1.1; padding-top: 1px; }

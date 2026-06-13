@@ -112,6 +112,7 @@ export function assembleSwimmers(
           isDq: ra.isDq ?? false, isInvalid: ra.invalidCode != null, isScratched,
           qualifying: checkQual(offTime, ath.gender, ath.competitionAge, evd.distance, evd.strokeCode, quals),
           isRelay: false,
+          distance: evd.distance, strokeCode: evd.strokeCode,
         };
         getOrCreateSwimmer(aid, ath).events.push(evt);
         continue;

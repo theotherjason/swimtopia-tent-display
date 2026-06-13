@@ -2,13 +2,13 @@
 Diagnostic script: inspect time-standard-sets across meets.
 
 Usage:
-  uv run python check_quals.py <email>           — list this year's meets + time standard status
-  uv run python check_quals.py <email> <year>    — list meets for a specific year (e.g. 2025)
-  uv run python check_quals.py <email> <meet_id> — inspect a specific meet in detail
+  uv run python check_quals.py <email>                — list this year's meets + time standard status
+  uv run python check_quals.py <email> <year>         — list meets for a specific year (e.g. 2025)
+  uv run python check_quals.py <email> <meet_id>      — show cuts table for a specific meet
+  uv run python check_quals.py <email> <meet_id> raw  — raw API dump for a specific meet
 
 The listing shows which meets have time standards configured (Standards column)
 and how many cuts are defined (Cuts column). A dash means no standards attached.
-Use the meet ID from the listing to drill into a specific meet's raw API response.
 """
 
 import sys, json, getpass
@@ -55,6 +55,58 @@ def fetch_std_summary(meet_id, token):
     )
     return label, len(cuts)
 
+STROKE = {1: 'Free', 2: 'Back', 3: 'Breast', 4: 'Fly', 5: 'IM', 6: 'Medley Relay', 7: 'Free Relay'}
+
+def fmt_time(hundredths):
+    if hundredths is None:
+        return '—'
+    s = hundredths // 100
+    frac = hundredths % 100
+    if s >= 60:
+        return f'{s // 60}:{s % 60:02d}.{frac:02d}'
+    return f'{s}.{frac:02d}'
+
+def cuts_table(meet_id, token):
+    include = 'time_standards,time_standard_events,time_standard_events.time_standard_cuts'
+    url = f'{BASE}/swim-meets/{meet_id}/time-standard-sets?include={urllib.parse.quote(include)}'
+    std = get(url, token)
+    included = std.get('included', [])
+
+    idx = {f"{o['type']}:{o['id']}": o for o in included}
+    label = next(
+        (o['attributes'].get('label') for o in included if o['type'] == 'timeStandard'),
+        'INV',
+    )
+    cuts = [o for o in included if o['type'] == 'timeStandardCut']
+    if not cuts:
+        print('No cuts found.')
+        return
+
+    rows = []
+    for cut in cuts:
+        tse_id = (cut.get('relationships', {}).get('timeStandardEvent') or {}).get('data', {}).get('id')
+        tse = idx.get(f'timeStandardEvent:{tse_id}')
+        if not tse:
+            continue
+        a = tse['attributes']
+        rows.append({
+            'gender':   a.get('athleteGender', '?'),
+            'age_min':  a.get('athleteMinAge'),
+            'age_max':  a.get('athleteMaxAge'),
+            'distance': a.get('distance'),
+            'stroke':   STROKE.get(a.get('strokeCode'), str(a.get('strokeCode', '?'))),
+            'cut':      cut['attributes'].get('timeInt'),
+        })
+
+    rows.sort(key=lambda r: (r['gender'], r['age_min'] or 0, r['distance'] or 0, r['stroke']))
+
+    print(f'\nCuts for {label} (meet {meet_id})\n')
+    print(f'{"Gender":<8} {"Age":<8} {"Dist":>5} {"Stroke":<14} {"Cut Time":>9}')
+    print('-' * 50)
+    for r in rows:
+        age = f"{r['age_min']}-{r['age_max']}" if r['age_min'] is not None else '?'
+        print(f'{r["gender"]:<8} {age:<8} {r["distance"]:>5} {r["stroke"]:<14} {fmt_time(r["cut"]):>9}')
+
 def inspect_meet(meet_id, token):
     include = 'time_standards,time_standard_events,time_standard_events.time_standard_cuts'
     url = f'{BASE}/swim-meets/{meet_id}/time-standard-sets?include={urllib.parse.quote(include)}'
@@ -100,8 +152,12 @@ def main():
     org_id = orgs['data'][0]['id']
 
     if arg2 and not is_year:
-        print(f'\nInspecting meet {arg2}…')
-        inspect_meet(arg2, token)
+        arg3 = sys.argv[3] if len(sys.argv) > 3 else ''
+        if arg3 == 'raw':
+            print(f'\nInspecting meet {arg2}…')
+            inspect_meet(arg2, token)
+        else:
+            cuts_table(arg2, token)
         return
 
     from datetime import date

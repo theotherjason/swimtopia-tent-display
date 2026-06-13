@@ -124,7 +124,7 @@ export function prevGroups(swimmers) {
       if (ev.status !== 'done') continue;
       if (!map[ev.eventId]) map[ev.eventId] = {
         eventId: ev.eventId, name: ev.name, number: ev.number,
-        schedIdx: ev.schedIdx, entries: [],
+        schedIdx: ev.schedIdx, distance: ev.distance, strokeCode: ev.strokeCode, entries: [],
       };
       const isDq      = ev.isDq ?? false;
       const isInvalid = ev.isInvalid ?? false;
