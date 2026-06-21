@@ -8,7 +8,7 @@
 <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 <meta name="apple-mobile-web-app-title" content="Tent Display">
 <meta name="theme-color" content="#0f172a">
-<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://mobile-api.swimtopia.com;">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; img-src 'self' data:; connect-src 'self' https://mobile-api.swimtopia.com;">
 <link rel="manifest" href="manifest.json">
 <title>SwimTopia Tent Display</title>
 <style>
@@ -267,10 +267,9 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     <div class="meets-topbar">
       <h2 class="meets-title">Select Meet</h2>
       <div class="meets-actions">
-        <button class="btn btn-ghost btn-sm" onclick="doLogout()">Sign Out</button>
-        <button class="btn btn-ghost btn-sm" id="theme-btn-meets" onclick="toggleTheme()">☀️ Day</button>
+        <button class="btn btn-ghost btn-sm" id="logout-btn">Sign Out</button>
+        <button class="btn btn-ghost btn-sm" id="theme-btn-meets">☀️ Day</button>
         <button class="btn btn-sm" id="go-btn" disabled
-          onclick="selectMeet(this.dataset.meetId, this.dataset.meetName)"
           style="width:auto;padding:9px 20px;font-size:0.95rem;">
           Launch Display ▶
         </button>
@@ -323,12 +322,12 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     </div>
     <div class="dh-right">
       <span class="font-btns">
-        <button class="btn-font" onclick="adjustFontSize(-1)" title="Smaller text">A−</button>
-        <button class="btn-font" onclick="adjustFontSize(1)" title="Larger text">A+</button>
+        <button class="btn-font" id="font-decrease-btn" title="Smaller text">A−</button>
+        <button class="btn-font" id="font-increase-btn" title="Larger text">A+</button>
       </span>
-      <button class="btn btn-ghost btn-sm" id="theme-btn-display" onclick="toggleTheme()">☀️ Day</button>
-      <button class="btn btn-ghost btn-sm" id="fullscreen-btn" onclick="toggleFullscreen()" title="Toggle fullscreen">⛶</button>
-      <button class="btn btn-ghost btn-sm" id="btn-back" onclick="backToMeets()">◀ Back</button>
+      <button class="btn btn-ghost btn-sm" id="theme-btn-display">☀️ Day</button>
+      <button class="btn btn-ghost btn-sm" id="fullscreen-btn" title="Toggle fullscreen">⛶</button>
+      <button class="btn btn-ghost btn-sm" id="btn-back">◀ Back</button>
     </div>
   </header>
   <div id="banner-top">

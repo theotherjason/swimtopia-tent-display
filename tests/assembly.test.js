@@ -295,6 +295,41 @@ describe('assembleSwimmers — individual entry', () => {
     expect(assembled[0].events[0].qualifying).toEqual([]);
   });
 
+  it('coerces heatNum and laneNum to numbers', () => {
+    const heats   = [makeHeat('h1', 'ev1', ['en1'], { number: '3' })];
+    const entries = [makeEntry('en1', 'ath1', { laneNumber: '5' })];
+    const { assembled } = run(heats, entries, NO_RESULTS, { ath1: makeAthlete() }, [makeEvent('ev1')]);
+    const ev = assembled[0].events[0];
+    expect(typeof ev.heatNum).toBe('number');
+    expect(ev.heatNum).toBe(3);
+    expect(typeof ev.laneNum).toBe('number');
+    expect(ev.laneNum).toBe(5);
+  });
+
+  it('sets status to done when heat is done and result is DQ', () => {
+    const heats   = [makeHeat('h1', 'ev1', ['en1'], { status: 'done' })];
+    const entries = [withResult(makeEntry('en1', 'ath1'), 'r1')];
+    const results = [makeResult('r1', { officialTimeInt: null, isDq: true })];
+    const { assembled } = run(heats, entries, results, { ath1: makeAthlete() }, [makeEvent('ev1')]);
+    expect(assembled[0].events[0].status).toBe('done');
+    expect(assembled[0].events[0].isDq).toBe(true);
+  });
+
+  it('accumulates multiple heats of the same event as separate event entries', () => {
+    const heats   = [
+      makeHeat('h1', 'ev1', ['en1'], { scheduleIndex: 0, number: 1 }),
+      makeHeat('h2', 'ev1', ['en2'], { scheduleIndex: 0, number: 2 }),
+    ];
+    const entries  = [makeEntry('en1', 'ath1', { laneNumber: 2 }), makeEntry('en2', 'ath1', { laneNumber: 4 })];
+    const athletes = { ath1: makeAthlete() };
+    const events   = [makeEvent('ev1', { eventNumber: 1 })];
+    const { assembled } = run(heats, entries, NO_RESULTS, athletes, events);
+    expect(assembled).toHaveLength(1);
+    expect(assembled[0].events).toHaveLength(2);
+    const laneNums = assembled[0].events.map(e => e.laneNum).sort();
+    expect(laneNums).toEqual([2, 4]);
+  });
+
   it('sets distance and strokeCode on the event', () => {
     const heats    = [makeHeat('h1', 'ev1', ['en1'])];
     const entries  = [makeEntry('en1', 'ath1')];
@@ -485,6 +520,14 @@ describe('assembleSwimmers — relay entries', () => {
     const { assembled } = run(heats, entries, NO_RESULTS, athletes, events, { relayLegMap, ageGroups: '9-10' });
     expect(assembled[0].events[0].name).toContain('Free');
     expect(assembled[0].events[0].name).not.toContain('Medley');
+  });
+
+  it('skips a relay entry with no legs in the relayLegMap', () => {
+    const heats   = [makeHeat('h1', 'ev1', ['en1'])];
+    const entries = [makeRelayEntry('en1', 'team1')];
+    const events  = [makeEvent('ev1', { eventType: 'relay', distance: 100, strokeCode: null, minAge: 9, maxAge: 10 })];
+    const { assembled } = run(heats, entries, NO_RESULTS, {}, events, { relayLegMap: {}, ageGroups: '9-10' });
+    expect(assembled).toHaveLength(0);
   });
 
   it('excludes relay entries for a different team when targetTeamId is set', () => {

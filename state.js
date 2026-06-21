@@ -3,7 +3,6 @@
 
 export const BASE  = 'https://mobile-api.swimtopia.com/mobile';
 export const OAUTH = 'https://mobile-api.swimtopia.com/oauth/token';
-export const TODAY = new Date().toISOString().slice(0, 10);
 export const DEMO_MODE = new URLSearchParams(location.search).has('demo');
 
 export const S = {
@@ -39,6 +38,22 @@ export const S = {
 };
 
 export const $ = id => document.getElementById(id);
+
+export function resetMeetState() {
+  S.nirvanaId            = null;
+  S._staticNirvanaId     = null;
+  S._eventsRes           = null;
+  S._evDetails           = null;
+  S._teamsRes            = null;
+  S._stdRes              = null;
+  S._athletes            = {};
+  S._hasInProgress       = false;
+  S._lastHeatsFetch      = 0;
+  S._heatTotalByEventNum = {};
+  S.swimmers             = [];
+  S.quals                = [];
+  S.tracker              = null;
+}
 
 export function show(view) {
   ['view-login', 'view-meets', 'view-display']

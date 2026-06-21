@@ -3,6 +3,9 @@
 
 import { STROKE, ageInRange, ageGroupOverlaps, checkQual } from './utils.js';
 
+const isScratched = (heatStatus, offTime, ra) =>
+  heatStatus === 'done' && offTime == null && !(ra.isDq ?? false) && ra.invalidCode == null;
+
 // ── Qualifying cuts ───────────────────────────────────────────────────────────
 
 export function assembleQuals(stdIncluded) {
@@ -65,6 +68,7 @@ export function assembleSwimmers(
   const getOrCreateSwimmer = (key, ath) => {
     if (!swimmerMap[key]) {
       swimmerMap[key] = {
+        // nirvana API uses preferredFirstName; pre-MM fallback (app.js) uses preferredName — verify if they diverge
         name:     [ath.preferredFirstName || ath.firstName, ath.lastName].filter(Boolean).join(' '),
         lastName: ath.lastName ?? '',
         age:      ath.competitionAge,
@@ -107,14 +111,14 @@ export function assembleSwimmers(
         const offTime = ra.officialTimeInt ?? null;
         const status  = _heatStatus(ha, offTime, ra);
 
-        const isScratched = ha.status === 'done' && offTime == null && !(ra.isDq ?? false) && ra.invalidCode == null;
+        const scratched = isScratched(ha.status, offTime, ra);
         const evt = {
           eventId: eid,   name: evd.name ?? 'Event', number: evd.number ?? '',
-          heatNum: ha.number, laneNum: ea.laneNumber, status,
+          heatNum: Number(ha.number) || null, laneNum: Number(ea.laneNumber) || null, status,
           schedIdx: ha.scheduleIndex ?? 0, etaEpoch, etaDisplay,
           offTime, seedTime: ea.seedTimeInt ?? null,
           place: ra.overallPlace ?? null, heatPlace: ra.heatPlace ?? null,
-          isDq: ra.isDq ?? false, isInvalid: ra.invalidCode != null, isScratched,
+          isDq: ra.isDq ?? false, isInvalid: ra.invalidCode != null, isScratched: scratched,
           qualifying: checkQual(offTime, ath.gender, ath.competitionAge, evd.distance, evd.strokeCode, quals),
           isRelay: false,
           distance: evd.distance, strokeCode: evd.strokeCode,
@@ -149,12 +153,12 @@ export function assembleSwimmers(
 
         getOrCreateSwimmer(leg.athleteId, ath).events.push({
           eventId: eid,   name: relayName, number: evd.number ?? '',
-          heatNum: ha.number, laneNum: ea.laneNumber, status,
+          heatNum: Number(ha.number) || null, laneNum: Number(ea.laneNumber) || null, status,
           schedIdx: ha.scheduleIndex ?? 0, etaEpoch, etaDisplay,
           offTime, seedTime: null,
           place: ra.overallPlace ?? null, heatPlace: null,
           isDq: ra.isDq ?? false, isInvalid: ra.invalidCode != null,
-          isScratched: ha.status === 'done' && offTime == null && !(ra.isDq ?? false) && ra.invalidCode == null,
+          isScratched: isScratched(ha.status, offTime, ra),
           qualifying: [], isRelay: true,
           relayTeam, legPosition: leg.position, legStroke: leg.strokeCode,
         });

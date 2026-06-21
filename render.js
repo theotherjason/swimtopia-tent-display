@@ -1,7 +1,7 @@
 import { S, $, DEMO_MODE } from './state.js';
 import {
   STROKE, ORDINAL,
-  esc, fmtTime, fmtClock, fmtCountdown, fmtDelta,
+  esc, fmtTime, fmtClock, fmtCountdown, fmtDelta, ageInRange,
   upcomingGroups as _upcomingGroups, prevGroups as _prevGroups,
 } from './utils.js';
 import { playWarning, playLineup } from './sounds.js';
@@ -43,6 +43,7 @@ export function renderTopBanner() {
     const gcode  = t.currentEventGender     ?? evd?.gender     ?? null;
     const minAge = t.currentEventMinAge     ?? evd?.minAge     ?? null;
     const maxAge = t.currentEventMaxAge     ?? evd?.maxAge     ?? null;
+
     const stroke = STROKE[scode] ?? '';
     const gender = gcode === 'F' ? 'Girls' : gcode === 'M' ? 'Boys' : '';
     const agePart = (minAge != null && maxAge != null) ? `${minAge}-${maxAge}` : '';
@@ -147,6 +148,12 @@ export function renderLineupBanner(now, prebuiltGroups = null) {
   }
 }
 
+function _cutLine(cuts) {
+  return cuts.length
+    ? cuts.map(q => `<span class="event-cut">${esc(q.label)}: ${fmtTime(q.cutTime)}</span>`).join('')
+    : '';
+}
+
 // ── Previous events panel ────────────────────────────────────────────────────
 
 export function renderPrevPanel() {
@@ -166,9 +173,7 @@ export function renderPrevPanel() {
             (q.ageMax == null || e.age <= q.ageMax))
         )
       : [];
-    const cutLine = cuts.length
-      ? cuts.map(q => `<span class="event-cut">${esc(q.label)}: ${fmtTime(q.cutTime)}</span>`).join('')
-      : '';
+    const cutLine = _cutLine(cuts);
     html += `<div class="prev-event-block">
       <div class="prev-event-name">Event ${esc(g.number)} · ${esc(g.name)}${cutLine ? `<span class="event-cuts">${cutLine}</span>` : ''}</div>`;
 
@@ -301,9 +306,7 @@ export function renderNextPanel(now, prebuiltGroups = null) {
             (q.ageMax == null || evd.maxAge == null || q.ageMax >= evd.maxAge)))
         )
       : [];
-    const cutLine = cuts.length
-      ? cuts.map(q => `<span class="event-cut">${esc(q.label)}: ${fmtTime(q.cutTime)}</span>`).join('')
-      : '';
+    const cutLine = _cutLine(cuts);
     let entriesHtml = '';
 
     if (isRelayEvent) {
@@ -356,6 +359,37 @@ export function renderNextPanel(now, prebuiltGroups = null) {
       </div>
       ${entriesHtml}`;
     panel.appendChild(card);
+  }
+}
+
+// ── Pre-meet entries (no Meet Maestro fallback) ───────────────────────────────
+
+export function renderPreMeetEntries(groups) {
+  if (!groups.length) {
+    $('panel-next').innerHTML = `<div class="panel-empty">No entries found for ${esc(S.ageGroups.join(', '))}${S.gender ? ' ' + (S.gender === 'M' ? 'Boys' : 'Girls') : ''}.</div>`;
+    return;
+  }
+
+  $('panel-next').innerHTML = '';
+  const note = document.createElement('div');
+  note.className = 'panel-empty'; note.style.marginBottom = '12px';
+  note.textContent = 'Entries only — heat assignments available on meet day.';
+  $('panel-next').appendChild(note);
+
+  for (const { evd, entries } of groups) {
+    entries.sort((a, b) => (a.seedTime ?? 9999) - (b.seedTime ?? 9999));
+    const card = document.createElement('div');
+    card.className = 'next-event-card';
+    card.innerHTML = `
+      <div class="next-card-header">
+        <div class="next-event-title">Event ${esc(evd.number)} · ${esc(evd.name)}</div>
+      </div>
+      ${entries.map(e => `
+        <div class="next-swimmer-row">
+          <span class="next-sw-name">${esc(e.name)}</span>
+          <span class="next-sw-seed">${e.seedTime ? fmtTime(e.seedTime) : '—'}</span>
+        </div>`).join('')}`;
+    $('panel-next').appendChild(card);
   }
 }
 

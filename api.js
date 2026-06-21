@@ -40,6 +40,7 @@ export async function api(path, params = {}, _retry = true) {
     try {
       const r = await fetch(url, {
         headers: { 'Accept': 'application/vnd.api+json', 'Authorization': `Bearer ${S.token}` },
+        cache: 'no-store',
       });
       if (r.status === 401 && _retry) {
         try {
@@ -69,7 +70,7 @@ export async function paginate(path, params = {}, size = 25) {
     out.data.push(...(page.data ?? []));
     out.included.push(...(page.included ?? []));
     offset += size;
-    if (page.data.length < size) break;
+    if ((page.data ?? []).length < size) break;
   }
   return out;
 }
@@ -111,7 +112,7 @@ export async function fetchFallbackStandards(orgId, excludeMeetId, meetDate) {
   const after = meetDate || new Date().toISOString().slice(0, 10);
   const cal = await api(`organizations/${orgId}/calendar-events`, {
     'filter[after]': after,
-    'page[size]': 100,
+    'page[limit]': 100,
   }).catch(() => ({ data: [] }));
   const candidates = (cal.data || [])
     .filter(e =>

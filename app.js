@@ -1,7 +1,7 @@
 // Application orchestration — auth flow, meet picker, data refresh, timers, themes.
 // This is the entry point loaded by index.html.
 
-import { S, $, show, DEMO_MODE, TODAY } from './state.js';
+import { S, $, show, DEMO_MODE, resetMeetState } from './state.js';
 import {
   api, paginate, login, onSessionExpired,
   fetchOrg, fetchCalendarEvents, fetchMeetDetails,
@@ -10,7 +10,7 @@ import {
   fetchMeetWithEvents, fetchSwimEntries,
 } from './api.js';
 import { assembleSwimmers, assembleQuals, buildEvDetails } from './assembly.js';
-import { renderAll, renderTopBanner, renderLineupBanner, renderNextPanel, tick, resetBannerState } from './render.js';
+import { renderAll, renderTopBanner, renderLineupBanner, renderNextPanel, renderPreMeetEntries, tick, resetBannerState } from './render.js';
 import { loadDemoData, startDemoAnimation } from './demo.js';
 import { STROKE, STANDARD_AGE_GROUPS, esc, ageInRange, fmtTime } from './utils.js';
 import { unlockAudio } from './sounds.js';
@@ -64,7 +64,8 @@ export async function goToMeetPicker() {
     const lookback = new Date(Date.now() - 30 * 864e5).toISOString().slice(0, 10);
     const resp  = await fetchCalendarEvents(S.orgId, lookback);
     const meets = (resp.data || []).filter(e => e.attributes?.stiType === 'SwimMeet');
-    const isUpcoming = m => (m.attributes.startDate ?? '') >= TODAY;
+    const today = new Date().toISOString().slice(0, 10);
+    const isUpcoming = m => (m.attributes.startDate ?? '') >= today;
     meets.sort((a, b) => {
       const ua = isUpcoming(a), ub = isUpcoming(b);
       if (ua && !ub) return -1; if (!ua && ub) return 1;
@@ -170,22 +171,10 @@ export async function loadTeamsForMeet(meetId, meetName, meetDate, cardEl) {
 }
 
 export async function selectMeet(meetId, meetName) {
-  S.meetId     = meetId;
-  S.meetDate   = $('go-btn').dataset.meetDate || null;
+  S.meetId   = meetId;
+  S.meetDate = $('go-btn').dataset.meetDate || null;
   resetBannerState();
-  S.nirvanaId        = null;
-  S._staticNirvanaId = null;
-  S._eventsRes       = null;
-  S._evDetails       = null;
-  S._teamsRes        = null;
-  S._stdRes          = null;
-  S._athletes        = {};
-  S._hasInProgress       = false;
-  S._lastHeatsFetch      = 0;
-  S._heatTotalByEventNum = {};
-  S.swimmers         = [];
-  S.quals            = [];
-  S.tracker          = null;
+  resetMeetState();
   S.ageGroups  = [...document.querySelectorAll('#inp-age-pills input:checked')].map(cb => cb.value);
   if (!S.ageGroups.length) S.ageGroups = ['9-10'];
   S.gender     = $('inp-gender').value;
@@ -214,7 +203,10 @@ export function backToMeets() { stopTimers(); releaseWakeLock(); show('view-meet
 
 // ── Data refresh ──────────────────────────────────────────────────────────────
 
+let _refreshInFlight = false;
 export async function refreshData() {
+  if (_refreshInFlight) return;
+  _refreshInFlight = true;
   try {
     if (!S.nirvanaId) {
       const meetResp = await fetchMeetDetails(S.meetId);
@@ -317,7 +309,11 @@ export async function refreshData() {
 
     // Mark events the tracker has already passed as done so they leave the
     // upcoming panel even when results haven't been entered yet.
-    if (newTracker?.currentEventNumberDigit) {
+    if (newTracker?.isComplete) {
+      for (const sw of assembled)
+        for (const ev of sw.events)
+          ev.status = 'done';
+    } else if (newTracker?.currentEventNumberDigit) {
       const cur = newTracker.currentEventNumberDigit;
       for (const sw of assembled)
         for (const ev of sw.events)
@@ -331,11 +327,13 @@ export async function refreshData() {
     S.updatedAt      = Date.now();
 
     renderAll();
-    startTicking();
+    if (!S.tickTimer) startTicking();
 
   } catch (ex) {
     $('panel-next').innerHTML = `<div class="loading" style="color:var(--red)">Error: ${esc(ex.message)}</div>`;
     console.error(ex);
+  } finally {
+    _refreshInFlight = false;
   }
 }
 
@@ -373,38 +371,14 @@ async function _loadSwimEntries() {
       if (!ageInRange(age, S.ageGroups)) continue;
       if (S.gender && ath.gender !== S.gender) continue;
       (byEvent[entry.relationships.swimEvent.data.id] ??= { evd, entries: [] }).entries.push({
+        // pre-MM API uses preferredName; nirvana path (assembly.js) uses preferredFirstName — verify if they diverge
         name:     [ath.preferredName || ath.firstName, ath.lastName].filter(Boolean).join(' '),
         seedTime: entry.attributes.seedTimeInt,
       });
     }
 
     const groups = Object.values(byEvent).sort((a, b) => parseInt(a.evd.number || 0) - parseInt(b.evd.number || 0));
-    if (!groups.length) {
-      $('panel-next').innerHTML = `<div class="panel-empty">No entries found for ${esc(S.ageGroups.join(', '))}${S.gender ? ' ' + (S.gender === 'M' ? 'Boys' : 'Girls') : ''}.</div>`;
-      return;
-    }
-
-    $('panel-next').innerHTML = '';
-    const note = document.createElement('div');
-    note.className = 'panel-empty'; note.style.marginBottom = '12px';
-    note.textContent = 'Entries only — heat assignments available on meet day.';
-    $('panel-next').appendChild(note);
-
-    for (const { evd, entries } of groups) {
-      entries.sort((a, b) => (a.seedTime ?? 9999) - (b.seedTime ?? 9999));
-      const card = document.createElement('div');
-      card.className = 'next-event-card';
-      card.innerHTML = `
-        <div class="next-card-header">
-          <div class="next-event-title">Event ${esc(evd.number)} · ${esc(evd.name)}</div>
-        </div>
-        ${entries.map(e => `
-          <div class="next-swimmer-row">
-            <span class="next-sw-name">${esc(e.name)}</span>
-            <span class="next-sw-seed">${e.seedTime ? fmtTime(e.seedTime) : '—'}</span>
-          </div>`).join('')}`;
-      $('panel-next').appendChild(card);
-    }
+    renderPreMeetEntries(groups);
 
     S.updatedAt = Date.now();
     $('dh-sub').textContent = S.ageGroups.join(', ')
@@ -426,7 +400,7 @@ export function startTicking() {
 
 export function startPolling() {
   if (S.pollTimer) clearInterval(S.pollTimer);
-  S.pollTimer = setInterval(refreshData, 20_000);
+  S.pollTimer = setInterval(refreshData, 30_000);
 }
 
 export function stopTimers() {
@@ -504,14 +478,19 @@ function toggleTheme() {
 
 _applyTheme(localStorage.getItem('st_theme') === 'day');
 
-// ── Expose handlers for inline onclick attributes ────────────────────────────
+// ── Button event listeners ────────────────────────────────────────────────────
 
-window.doLogout       = doLogout;
-window.toggleTheme    = toggleTheme;
-window.selectMeet     = selectMeet;
-window.backToMeets    = backToMeets;
-window.adjustFontSize = adjustFontSize;
-window.toggleFullscreen = toggleFullscreen;
+$('logout-btn')      .addEventListener('click', doLogout);
+$('theme-btn-meets') .addEventListener('click', toggleTheme);
+$('go-btn')          .addEventListener('click', () => {
+  const btn = $('go-btn');
+  selectMeet(btn.dataset.meetId, btn.dataset.meetName);
+});
+$('font-decrease-btn').addEventListener('click', () => adjustFontSize(-1));
+$('font-increase-btn').addEventListener('click', () => adjustFontSize(1));
+$('theme-btn-display').addEventListener('click', toggleTheme);
+$('fullscreen-btn')  .addEventListener('click', toggleFullscreen);
+$('btn-back')        .addEventListener('click', backToMeets);
 
 // ── Boot ──────────────────────────────────────────────────────────────────────
 

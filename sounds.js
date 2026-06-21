@@ -1,8 +1,23 @@
-let _ctx = null;
+let _ctx  = null;
+let _sink = null;
 
 function _getCtx() {
   if (!_ctx) _ctx = new (window.AudioContext || window.webkitAudioContext)();
   return _ctx;
+}
+
+function _getSink(ctx) {
+  if (!_sink) {
+    const comp = ctx.createDynamicsCompressor();
+    comp.threshold.value = -6;
+    comp.knee.value = 3;
+    comp.ratio.value = 20;
+    comp.attack.value = 0.001;
+    comp.release.value = 0.1;
+    comp.connect(ctx.destination);
+    _sink = comp;
+  }
+  return _sink;
 }
 
 export function unlockAudio() {
@@ -10,18 +25,6 @@ export function unlockAudio() {
     const ctx = _getCtx();
     if (ctx.state === 'suspended') ctx.resume();
   } catch (_) {}
-}
-
-// Square waves + compressor for outdoor audibility
-function _makeSink(ctx) {
-  const comp = ctx.createDynamicsCompressor();
-  comp.threshold.value = -6;
-  comp.knee.value = 3;
-  comp.ratio.value = 20;
-  comp.attack.value = 0.001;
-  comp.release.value = 0.1;
-  comp.connect(ctx.destination);
-  return comp;
 }
 
 function _tone(ctx, sink, freq, startTime, duration, gain = 0.7) {
@@ -45,7 +48,7 @@ export function playWarning() {
   try {
     const ctx = _getCtx();
     if (ctx.state !== 'running') return;
-    const sink = _makeSink(ctx);
+    const sink = _getSink(ctx);
     const t = ctx.currentTime;
     const span = 0.18 + 0.22 + 0.22;
     for (let i = 0; i < 3; i++) {
@@ -60,7 +63,7 @@ export function playLineup() {
   try {
     const ctx = _getCtx();
     if (ctx.state !== 'running') return;
-    const sink = _makeSink(ctx);
+    const sink = _getSink(ctx);
     const t = ctx.currentTime;
     const span = 0.14 + 0.16 + 0.14 + 0.28;
     for (let i = 0; i < 3; i++) {

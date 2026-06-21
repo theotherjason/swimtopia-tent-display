@@ -36,7 +36,8 @@ Polls every 30s for live heat updates
 | `demo.js` | Demo fixture data + 8-second heat-completion animation |
 | `state.js` | Shared mutable state `S`, DOM helper `$`, constants |
 | `utils.js` | Pure utilities — `esc`, `fmtTime`, `ageInRange`, group builders |
-| `tests/utils.test.js` | 68 JS unit tests (vitest) |
+| `tests/utils.test.js` | Pure utility unit tests (vitest) |
+| `tests/assembly.test.js` | Assembly transformation unit tests (vitest) |
 
 ## Development commands
 
@@ -68,13 +69,21 @@ S = {
   eventId, name, number, schedIdx,
   heatNum, laneNum, status,        // 'done' | 'inProgress' | 'upcoming'
   etaEpoch, etaDisplay,
-  offTime, seedTime,               // hundredths of seconds (null if not done)
+  offTime, seedTime,               // hundredths of seconds (null if not done/seeded)
   place, heatPlace,
-  isDq, isInvalid, qualifying,     // ['INV', ...]
+  isDq, isInvalid, isScratched,    // isScratched inferred (done + no time + not DQ/INV)
+  qualifying,                      // ['INV', ...]
   isRelay,                         // false for individual events
   relayTeam, legPosition, legStroke,  // relay fields (isRelay=true only)
 }
 ```
+
+Display notes:
+- No official time (including scratches) renders as `—`; DQ renders as `DQ`
+- Seed times shown in upcoming events as `Seed: 1:23.45`
+- Relay upcoming events order: Heat · Lane · Relay (e.g. `Heat 3 · Lane 4 · Relay A`)
+- Live banner heat display: `Heat X of Y`
+- Completed events panel was previously called "Previous Events"
 
 ## The API
 
@@ -183,10 +192,12 @@ See `fmtTime()` in `utils.js`.
 
 Visit `index.html?demo` to see the display without logging in.
 The demo shows:
-- Two done relay events (Medley + Free) in the previous panel
-- 50 Fly heat 1 done, heat 2 actively in-water (inProgress)
+- Two done relay events (Medley + Free) in the Completed Events panel
+- 50 Free with a no-time scratch entry (shows `—`)
+- 100 Back with a DQ entry (shows `DQ`)
+- 50 Back heat 1 done, heat 2 actively in-water (inProgress)
 - Lineup banner in WARNING state for the upcoming Medley Relay
-- After 8 seconds: heat 2 results arrive, tracker advances
+- After 8 seconds: heat 2 results arrive, tracker advances through remaining events
 
 Demo data lives in `demo.js` and uses the same `S.swimmers` shape as live data.
 
@@ -195,4 +206,6 @@ Demo data lives in `demo.js` and uses the same `S.swimmers` shape as live data.
 - All API calls go browser → SwimTopia directly (CORS is open, no proxy needed)
 - No credentials are stored; the Bearer token lives in `sessionStorage` only
 - The app uses the same API endpoints as SwimTopia's own mobile app
+- CSP blocks inline scripts (`script-src 'self'` only) — do not use `onclick=` attributes;
+  wire all button handlers via `addEventListener` in `app.js`
 - `CLAUDE.md` is read by the Claude Code AI assistant at session start
