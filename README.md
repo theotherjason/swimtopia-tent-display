@@ -17,10 +17,11 @@ Every parent signs in with their **own** SwimTopia account. The app calls SwimTo
 ## Quickstart — GitHub Pages (no install required)
 
 1. Fork this repository
-2. Go to **Settings → Pages → Source → Deploy from branch**
-3. Select `main`, folder `/` (root), click Save
-4. Wait ~60 seconds, then visit `https://your-username.github.io/your-repo-name/`
-5. Share that URL with your team's tent parents
+2. Delete the `CNAME` file (it points to the original owner's domain — leave it out unless you're setting up your own custom domain)
+3. Go to **Settings → Pages → Source → Deploy from branch**
+4. Select `main`, folder `/` (root), click Save
+5. Wait ~60 seconds, then visit `https://your-username.github.io/your-repo-name/`
+6. Share that URL with your team's tent parents
 
 That's it. SwimTopia's API has open CORS (`access-control-allow-origin: *`), so the browser calls it directly with no backend needed.
 
