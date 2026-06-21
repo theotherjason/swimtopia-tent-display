@@ -1,4 +1,4 @@
-import { S, $ } from './state.js';
+import { S, $, DEMO_MODE } from './state.js';
 import {
   STROKE, ORDINAL,
   esc, fmtTime, fmtClock, fmtCountdown, fmtDelta,
@@ -23,7 +23,8 @@ export function renderAll() {
   renderNextPanel(now, upcoming);
   $('dh-sub').textContent = (S.ageGroups ?? []).join(', ')
     + (S.gender ? ' · ' + (S.gender === 'F' ? 'Girls' : 'Boys') : '')
-    + (S.teamFilter ? ` · ${S.teamName || S.teamFilter}` : '');
+    + (S.teamFilter ? ` · ${S.teamName || S.teamFilter}` : '')
+    + (DEMO_MODE ? '  ·  Demo mode — events advance faster than real time' : '');
 }
 
 // ── Top banner (live event in pool) ──────────────────────────────────────────
@@ -45,9 +46,13 @@ export function renderTopBanner() {
     const stroke = STROKE[scode] ?? '';
     const gender = gcode === 'F' ? 'Girls' : gcode === 'M' ? 'Boys' : '';
     const agePart = (minAge != null && maxAge != null) ? `${minAge}-${maxAge}` : '';
+    const totalHeats = S._heatTotalByEventNum?.[String(t.currentEventNumberDigit)] ?? null;
+    const heatStr    = t.currentHeatNumber
+      ? (totalHeats ? `Heat ${t.currentHeatNumber}/${totalHeats}` : `Heat ${t.currentHeatNumber}`)
+      : null;
     const parts = [
       t.currentEventNumberDigit ? `Event ${t.currentEventNumberDigit}` : null,
-      t.currentHeatNumber ? `Heat ${t.currentHeatNumber}` : null,
+      heatStr,
       dist ? `${dist} ${stroke}`.trim() : null,
       (agePart || gender) ? `${agePart} ${gender}`.trim() : null,
     ].filter(Boolean);
@@ -168,16 +173,16 @@ export function renderPrevPanel() {
       <div class="prev-event-name">Event ${esc(g.number)} · ${esc(g.name)}${cutLine ? `<span class="event-cuts">${cutLine}</span>` : ''}</div>`;
 
     if (isRelayEvent) {
-      html += _renderRelayResultBlock(g.entries);
+      html += _renderRelayResultBlock(g.entries, g.isComplete);
     } else {
-      html += _renderIndividualResults(g.entries);
+      html += _renderIndividualResults(g.entries, g.isComplete);
     }
     html += '</div>';
   }
   panel.innerHTML = html;
 }
 
-function _renderRelayResultBlock(entries) {
+function _renderRelayResultBlock(entries, isEventComplete = true) {
   let html = '';
   const teamMap = {};
   for (const e of entries) {
@@ -190,7 +195,7 @@ function _renderRelayResultBlock(entries) {
   }
   for (const [, t] of Object.entries(teamMap).sort()) {
     t.legs.sort((a, b) => (a.legPosition ?? 99) - (b.legPosition ?? 99));
-    const placeN   = t.place ?? 0;
+    const placeN   = (isEventComplete && t.place) ? t.place : 0;
     const placeStr = placeN && ORDINAL[placeN] ? ORDINAL[placeN] : '—';
     const badgeCls = placeN === 1 ? 'ps-badge p1' : placeN === 2 ? 'ps-badge p2' : placeN === 3 ? 'ps-badge p3' : 'ps-badge';
     const label    = t.relayTeam ? `Relay ${esc(t.relayTeam)}` : 'Relay';
@@ -214,16 +219,17 @@ function _renderRelayResultBlock(entries) {
       </div>`;
     }
   }
+  if (!isEventComplete) html += `<div class="scoring-note">Scoring in progress…</div>`;
   return html;
 }
 
-function _renderIndividualResults(entries) {
+function _renderIndividualResults(entries, isEventComplete = true) {
   let html = '';
   const anyHasTime = entries.some(e => e.offTime != null);
   const hasPartial = anyHasTime && entries.some(e => e.offTime == null && !e.isDq && !e.isScratched && !e.isInvalid);
 
   for (const e of entries) {
-    const placeN   = e.place ?? 0;
+    const placeN   = (isEventComplete && e.place) ? e.place : 0;
     const placeStr = placeN && ORDINAL[placeN] ? ORDINAL[placeN] : '—';
     const badgeCls = placeN === 1 ? 'ps-badge p1' : placeN === 2 ? 'ps-badge p2' : placeN === 3 ? 'ps-badge p3' : 'ps-badge';
     const timeStr  = e.isDq ? 'DQ' : e.isScratched ? 'SCR' : (e.offTime != null ? fmtTime(e.offTime) : '—');
@@ -246,7 +252,7 @@ function _renderIndividualResults(entries) {
       </div>
     </div>`;
   }
-  if (hasPartial) html += `<div class="scoring-note">Scoring in progress…</div>`;
+  if (!isEventComplete || hasPartial) html += `<div class="scoring-note">Scoring in progress…</div>`;
   return html;
 }
 
@@ -286,6 +292,18 @@ export function renderNextPanel(now, prebuiltGroups = null) {
       : '';
 
     const isRelayEvent = g.entries.some(e => e.isRelay);
+    const evd = S._evDetails?.[g.eventId];
+    const cuts = !isRelayEvent && g.distance && g.strokeCode
+      ? S.quals.filter(q =>
+          q.distance === g.distance && q.strokeCode === g.strokeCode &&
+          (!evd || ((!q.gender || q.gender === evd.gender) &&
+            (q.ageMin == null || evd.minAge == null || q.ageMin <= evd.minAge) &&
+            (q.ageMax == null || evd.maxAge == null || q.ageMax >= evd.maxAge)))
+        )
+      : [];
+    const cutLine = cuts.length
+      ? cuts.map(q => `<span class="event-cut">${esc(q.label)}: ${fmtTime(q.cutTime)}</span>`).join('')
+      : '';
     let entriesHtml = '';
 
     if (isRelayEvent) {
@@ -300,25 +318,29 @@ export function renderNextPanel(now, prebuiltGroups = null) {
       );
       for (const t of teams) {
         t.legs.sort((a, b) => (a.legPosition ?? 99) - (b.legPosition ?? 99));
+        const isInWater = t.legs.some(l => l.status === 'inProgress')
+          || (S.tracker?.isLive && String(g.number) === String(currentEvNum) && t.heatNum === S.tracker.currentHeatNumber);
         const label   = t.relayTeam ? `Relay ${esc(t.relayTeam)}` : 'Relay';
         const heatBit = t.heatNum != null ? `Heat ${t.heatNum} · ` : '';
-        entriesHtml += `<div class="relay-team-header">${heatBit}${label} · Lane ${t.laneNum}</div>`;
+        entriesHtml += `<div class="relay-team-header">${heatBit}${label} · Lane ${t.laneNum}${isInWater ? '<span class="in-water pulse">In water</span>' : ''}</div>`;
         for (const leg of t.legs) {
-          const inWater   = leg.status === 'inProgress' ? `<span class="in-water pulse">In water</span>` : '';
           const strokeBit = leg.legStroke ? `<span class="relay-leg-stroke">${esc(STROKE[leg.legStroke] ?? '')}</span>` : '';
           entriesHtml += `<div class="next-swimmer-row relay-leg-row">
             <span class="relay-leg-num">${leg.legPosition ?? ''}.</span>
             ${strokeBit}
             <span class="next-sw-name">${esc(leg.name)}</span>
-            ${inWater}
           </div>`;
         }
       }
     } else {
       for (const e of g.entries) {
         const statusBit = e.status === 'inProgress' ? `<span class="in-water pulse">In water</span>` : '';
+        const seedBit   = e.seedTime != null ? `<span class="next-sw-seed">${fmtTime(e.seedTime)}</span>` : '';
         entriesHtml += `<div class="next-swimmer-row">
-          <span class="next-sw-name">${esc(e.name)}</span>
+          <div class="next-sw-left">
+            <span class="next-sw-name">${esc(e.name)}</span>
+            ${seedBit}
+          </div>
           <span class="next-sw-hl">Heat ${e.heatNum} · Lane ${e.laneNum}</span>
           ${statusBit}
         </div>`;
@@ -329,7 +351,7 @@ export function renderNextPanel(now, prebuiltGroups = null) {
     card.className = cardCls;
     card.innerHTML = `
       <div class="next-card-header">
-        <div class="next-event-title">Event ${esc(g.number)} · ${esc(g.name)}</div>
+        <div class="next-event-title">Event ${esc(g.number)} · ${esc(g.name)}${cutLine ? `<span class="event-cuts">${cutLine}</span>` : ''}</div>
         ${etaStr ? `<div class="next-event-time">${etaStr}</div>` : ''}
       </div>
       ${entriesHtml}`;

@@ -180,8 +180,9 @@ export async function selectMeet(meetId, meetName) {
   S._teamsRes        = null;
   S._stdRes          = null;
   S._athletes        = {};
-  S._hasInProgress   = false;
-  S._lastHeatsFetch  = 0;
+  S._hasInProgress       = false;
+  S._lastHeatsFetch      = 0;
+  S._heatTotalByEventNum = {};
   S.swimmers         = [];
   S.quals            = [];
   S.tracker          = null;
@@ -254,6 +255,14 @@ export async function refreshData() {
 
     const heatsRes = await fetchNirvanaHeats(S.nirvanaId);
     S._lastHeatsFetch = Date.now();
+
+    // Count heats per event number so the top banner can show "Heat X/Y".
+    const heatTotals = {};
+    for (const heat of heatsRes.data) {
+      const evNum = S._evDetails[heat.relationships?.nirvanaEvent?.data?.id]?.number;
+      if (evNum != null) heatTotals[String(evNum)] = (heatTotals[String(evNum)] ?? 0) + 1;
+    }
+    S._heatTotalByEventNum = heatTotals;
 
     const { _eventsRes: eventsRes, _teamsRes: teamsRes, _stdRes: stdRes } = S;
 
@@ -417,7 +426,7 @@ export function startTicking() {
 
 export function startPolling() {
   if (S.pollTimer) clearInterval(S.pollTimer);
-  S.pollTimer = setInterval(refreshData, 30_000);
+  S.pollTimer = setInterval(refreshData, 20_000);
 }
 
 export function stopTimers() {

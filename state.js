@@ -33,8 +33,9 @@ export const S = {
   _stdRes:          null,
   // per-meet caches reset on meet switch
   _athletes:        {},     // id → athlete attributes; fetched once, never re-fetched
-  _hasInProgress:   false,  // were any heats in-progress on the last fetch?
-  _lastHeatsFetch:  0,      // ms timestamp of last heats fetch (force refresh every 5 min)
+  _hasInProgress:       false,  // were any heats in-progress on the last fetch?
+  _lastHeatsFetch:      0,      // ms timestamp of last heats fetch (force refresh every 5 min)
+  _heatTotalByEventNum: {},     // eventNumber → total heat count (for Heat X/Y banner display)
 };
 
 export const $ = id => document.getElementById(id);

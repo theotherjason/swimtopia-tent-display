@@ -191,16 +191,17 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
 .next-event-card.is-lineup  { border-color: var(--red); }
 .next-event-card.is-warning { border-color: var(--orange); }
 .next-card-header  { padding: 10px 14px 8px; border-bottom: 1px solid var(--border); }
-.next-event-title  { font-size: 1.05rem; font-weight: 700; color: var(--text); padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--border); }
+.next-event-title  { font-size: 1.05rem; font-weight: 700; color: var(--text); padding-bottom: 6px; margin-bottom: 6px; border-bottom: 1px solid var(--border); display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
 .next-event-time   { font-size: 0.88rem; color: var(--muted); }
 .next-event-time .eta-val  { color: var(--text); font-weight: 600; font-size: 0.95rem; }
 .next-swimmer-row  { display: flex; align-items: center; padding: 7px 14px; border-bottom: 1px solid var(--divider); gap: 8px; font-size: 0.9rem; }
 .next-swimmer-row:last-child { border-bottom: none; }
-.next-sw-name { flex: 1; font-weight: 500; }
+.next-sw-name { font-weight: 500; }
+.next-sw-left { flex: 1; display: flex; align-items: center; gap: 8px; }
 .next-sw-hl   { color: var(--text); font-size: 0.88rem; font-weight: 500; white-space: nowrap; }
-.next-sw-seed { font-size: 0.78rem; color: var(--muted); white-space: nowrap; text-align: right; min-width: 52px; }
+.next-sw-seed { font-size: 0.78rem; color: var(--muted); white-space: nowrap; }
 .in-water     { color: var(--blue); font-weight: 700; font-size: 0.78rem; }
-.relay-team-header { padding: 6px 14px 4px; font-size: 0.82rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--divider); background: var(--bg); }
+.relay-team-header { padding: 6px 14px 4px; font-size: 0.82rem; font-weight: 700; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; border-bottom: 1px solid var(--divider); background: var(--bg); display: flex; align-items: center; justify-content: space-between; }
 .relay-leg-row    { padding-left: 22px !important; }
 .relay-leg-num    { font-size: 0.8rem; color: var(--muted); min-width: 18px; flex-shrink: 0; }
 .relay-leg-stroke { font-size: 0.82rem; font-weight: 600; color: var(--blue); min-width: 52px; flex-shrink: 0; }
@@ -251,6 +252,11 @@ html, body { height: 100%; background: var(--bg); color: var(--text); font-famil
     <div style="text-align:center;margin-top:20px;font-size:0.85rem;color:var(--muted)">
       No account? <a href="?demo"
         style="color:var(--blue);text-decoration:none;">Try the live demo →</a>
+    </div>
+    <div style="text-align:center;margin-top:16px;font-size:0.75rem;color:var(--muted);line-height:1.5">
+      Made for the <strong>Rattan Creek Hurricanes Swim Club</strong> ·
+      <a href="https://github.com/theotherjason/swimtopia-tent-display"
+        style="color:var(--muted);text-decoration:underline;" target="_blank" rel="noopener">Open source on GitHub</a>
     </div>
   </div>
 </div>

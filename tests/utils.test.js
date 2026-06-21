@@ -150,6 +150,8 @@ function mkEvent(overrides) {
     eventId: 'e1', name: '50 Free', number: '1',
     schedIdx: 1000, etaEpoch: null, etaDisplay: '—',
     heatNum: 1, laneNum: 3, seedTime: 3500, status: 'upcoming',
+    distance: 50, strokeCode: 1,
+    isRelay: false, relayTeam: null, legPosition: null, legStroke: null,
     ...overrides,
   };
 }
@@ -202,6 +204,13 @@ describe('upcomingGroups', () => {
     const groups = upcomingGroups(swimmers);
     expect(groups[0].eventId).toBe('e1');
     expect(groups[1].eventId).toBe('e2');
+  });
+
+  it('group carries distance and strokeCode', () => {
+    const swimmers = [mkSwimmer('Alice', [mkEvent({ distance: 100, strokeCode: 2 })])];
+    const g = upcomingGroups(swimmers)[0];
+    expect(g.distance).toBe(100);
+    expect(g.strokeCode).toBe(2);
   });
 });
 
@@ -289,6 +298,25 @@ describe('prevGroups', () => {
     const entries = prevGroups(swimmers)[0].entries;
     expect(entries[0].place).toBe(1);
     expect(entries[1].place).toBeNull();
+  });
+
+  it('isComplete true when all heats for the event are done', () => {
+    const swimmers = [
+      mkSwimmer('Alice', [mkDoneEvent({ heatNum: 1 })]),
+      mkSwimmer('Bob',   [mkDoneEvent({ heatNum: 2 })]),
+    ];
+    expect(prevGroups(swimmers)[0].isComplete).toBe(true);
+  });
+
+  it('isComplete false when some heats are still upcoming', () => {
+    const swimmers = [
+      mkSwimmer('Alice', [mkDoneEvent({ heatNum: 1 })]),
+      mkSwimmer('Bob',   [mkDoneEvent({ heatNum: 1, status: 'upcoming' })]),
+    ];
+    // Bob's heat is upcoming — prevGroups only includes Alice, but event is not complete
+    const groups = prevGroups(swimmers);
+    expect(groups).toHaveLength(1);
+    expect(groups[0].isComplete).toBe(false);
   });
 });
 

@@ -88,7 +88,9 @@ export function upcomingGroups(swimmers) {
       if (ev.status === 'done') continue;
       if (!map[ev.eventId]) map[ev.eventId] = {
         eventId: ev.eventId, name: ev.name, number: ev.number,
-        schedIdx: ev.schedIdx, etaEpoch: ev.etaEpoch, etaDisplay: ev.etaDisplay, entries: [],
+        schedIdx: ev.schedIdx, etaEpoch: ev.etaEpoch, etaDisplay: ev.etaDisplay,
+        distance: ev.distance, strokeCode: ev.strokeCode,
+        entries: [],
       };
       const g = map[ev.eventId];
       if (ev.etaEpoch && (!g.etaEpoch || ev.etaEpoch < g.etaEpoch)) {
@@ -118,13 +120,21 @@ export function upcomingGroups(swimmers) {
 }
 
 export function prevGroups(swimmers) {
+  // Detect events that still have heats in progress or upcoming (overall place is provisional).
+  const eventHasNonDone = new Set();
+  for (const sw of swimmers)
+    for (const ev of sw.events)
+      if (ev.status !== 'done') eventHasNonDone.add(ev.eventId);
+
   const map = {};
   for (const sw of swimmers) {
     for (const ev of sw.events) {
       if (ev.status !== 'done') continue;
       if (!map[ev.eventId]) map[ev.eventId] = {
         eventId: ev.eventId, name: ev.name, number: ev.number,
-        schedIdx: ev.schedIdx, distance: ev.distance, strokeCode: ev.strokeCode, entries: [],
+        schedIdx: ev.schedIdx, distance: ev.distance, strokeCode: ev.strokeCode,
+        isComplete: !eventHasNonDone.has(ev.eventId),
+        entries: [],
       };
       const isDq      = ev.isDq ?? false;
       const isInvalid = ev.isInvalid ?? false;
