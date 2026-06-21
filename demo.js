@@ -136,6 +136,16 @@ export function loadDemoData() {
       ],
     },
     {
+      name: 'Mason Williams', lastName: 'Williams', age: 9, gender: 'M',
+      events: [
+        { eventId: 'e14', name: '50 Free', number: '14', schedIdx: 14001, status: 'done', distance: 50, strokeCode: 1,
+          heatNum: 1, laneNum: 6, offTime: null, seedTime: 3620, place: null, heatPlace: null, qualifying: [], isDq: false, isScratched: true },
+        { eventId: 'e79', name: '50 Fly', number: '79', schedIdx: 79001, status: 'upcoming',
+          heatNum: 1, laneNum: 2, etaEpoch: eta(18 * 60), etaDisplay: etaFmt(18 * 60),
+          seedTime: 4750, distance: 50, strokeCode: 4, qualifying: [] },
+      ],
+    },
+    {
       name: 'Oliver Chen', lastName: 'Chen', age: 10, gender: 'M',
       events: [
         { eventId: 'e14', name: '50 Free',  number: '14', schedIdx: 14001, status: 'done', distance: 50, strokeCode: 1,

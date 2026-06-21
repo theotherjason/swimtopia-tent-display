@@ -48,7 +48,7 @@ export function renderTopBanner() {
     const agePart = (minAge != null && maxAge != null) ? `${minAge}-${maxAge}` : '';
     const totalHeats = S._heatTotalByEventNum?.[String(t.currentEventNumberDigit)] ?? null;
     const heatStr    = t.currentHeatNumber
-      ? (totalHeats ? `Heat ${t.currentHeatNumber}/${totalHeats}` : `Heat ${t.currentHeatNumber}`)
+      ? (totalHeats ? `Heat ${t.currentHeatNumber} of ${totalHeats}` : `Heat ${t.currentHeatNumber}`)
       : null;
     const parts = [
       t.currentEventNumberDigit ? `Event ${t.currentEventNumberDigit}` : null,
@@ -154,7 +154,7 @@ export function renderPrevPanel() {
   const groups = prevGroups();
   if (!groups.length) { panel.innerHTML = ''; return; }
 
-  let html = '<div class="prev-event-title">Previous Events</div>';
+  let html = '<div class="prev-event-title">Completed Events</div>';
 
   for (const g of groups) {
     const isRelayEvent = g.entries.some(e => e.isRelay);
@@ -199,8 +199,8 @@ function _renderRelayResultBlock(entries, isEventComplete = true) {
     const placeStr = placeN && ORDINAL[placeN] ? ORDINAL[placeN] : '—';
     const badgeCls = placeN === 1 ? 'ps-badge p1' : placeN === 2 ? 'ps-badge p2' : placeN === 3 ? 'ps-badge p3' : 'ps-badge';
     const label    = t.relayTeam ? `Relay ${esc(t.relayTeam)}` : 'Relay';
-    const timeStr  = t.isDq ? 'DQ' : t.isScratched ? 'SCR' : (t.offTime != null ? fmtTime(t.offTime) : '—');
-    const timeCls  = t.isDq ? 'dq' : t.isScratched ? 'scr' : '';
+    const timeStr  = t.isDq ? 'DQ' : (t.offTime != null ? fmtTime(t.offTime) : '—');
+    const timeCls  = t.isDq ? 'dq' : '';
     html += `<div class="prev-swimmer">
       <div class="${badgeCls}">${placeStr}</div>
       <div class="ps-right">
@@ -232,8 +232,8 @@ function _renderIndividualResults(entries, isEventComplete = true) {
     const placeN   = (isEventComplete && e.place) ? e.place : 0;
     const placeStr = placeN && ORDINAL[placeN] ? ORDINAL[placeN] : '—';
     const badgeCls = placeN === 1 ? 'ps-badge p1' : placeN === 2 ? 'ps-badge p2' : placeN === 3 ? 'ps-badge p3' : 'ps-badge';
-    const timeStr  = e.isDq ? 'DQ' : e.isScratched ? 'SCR' : (e.offTime != null ? fmtTime(e.offTime) : '—');
-    const timeCls  = e.isDq ? 'dq' : e.isScratched ? 'scr' : '';
+    const timeStr  = e.isDq ? 'DQ' : (e.offTime != null ? fmtTime(e.offTime) : '—');
+    const timeCls  = e.isDq ? 'dq' : '';
     const delta    = fmtDelta(e.offTime, e.seedTime);
     const heatPlSt = e.heatNum != null
       ? `Heat ${e.heatNum}${e.heatPlace && ORDINAL[e.heatPlace] ? ` · ${ORDINAL[e.heatPlace]} in heat` : ''}`
@@ -322,7 +322,7 @@ export function renderNextPanel(now, prebuiltGroups = null) {
           || (S.tracker?.isLive && String(g.number) === String(currentEvNum) && t.heatNum === S.tracker.currentHeatNumber);
         const label   = t.relayTeam ? `Relay ${esc(t.relayTeam)}` : 'Relay';
         const heatBit = t.heatNum != null ? `Heat ${t.heatNum} · ` : '';
-        entriesHtml += `<div class="relay-team-header">${heatBit}${label} · Lane ${t.laneNum}${isInWater ? '<span class="in-water pulse">In water</span>' : ''}</div>`;
+        entriesHtml += `<div class="relay-team-header">${heatBit}Lane ${t.laneNum} · ${label}${isInWater ? '<span class="in-water pulse">In water</span>' : ''}</div>`;
         for (const leg of t.legs) {
           const strokeBit = leg.legStroke ? `<span class="relay-leg-stroke">${esc(STROKE[leg.legStroke] ?? '')}</span>` : '';
           entriesHtml += `<div class="next-swimmer-row relay-leg-row">
@@ -335,7 +335,7 @@ export function renderNextPanel(now, prebuiltGroups = null) {
     } else {
       for (const e of g.entries) {
         const statusBit = e.status === 'inProgress' ? `<span class="in-water pulse">In water</span>` : '';
-        const seedBit   = e.seedTime != null ? `<span class="next-sw-seed">${fmtTime(e.seedTime)}</span>` : '';
+        const seedBit   = e.seedTime != null ? `<span class="next-sw-seed">Seed: ${fmtTime(e.seedTime)}</span>` : '';
         entriesHtml += `<div class="next-swimmer-row">
           <div class="next-sw-left">
             <span class="next-sw-name">${esc(e.name)}</span>
